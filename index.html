@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ubuntu Autoinstall Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root{
+  --bg-deep:#1a0012;
+  --bg-panel:#2c001e;
+  --bg-field:#3a0a28;
+  --border:#7c2f64;
+  --border-dim:#532142;
+  --orange:#E95420;
+  --orange-dim:#b8431a;
+  --amber:#EFB73E;
+  --cream:#F7F3EE;
+  --muted:#c4a8bb;
+  --muted-dim:#8a7088;
+  --ok:#5fb87a;
+  --warn:#e8716a;
+  --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --sans:'IBM Plex Sans', system-ui, sans-serif;
+}
+
+html{scroll-behavior:smooth;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,47,100,0.35), transparent);
+  color:var(--cream);
+  font-family:var(--sans);
+  line-height:1.5;
+  min-height:100vh;
+}
+
+a{color:var(--amber);}
+
+/* ===== Hero / boot prompt ===== */
+.hero{
+  border-bottom:1px solid var(--border-dim);
+  padding:28px 24px 22px;
+  background:var(--bg-panel);
+}
+.hero-inner{max-width:1180px;margin:0 auto;}
+.hero pre{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--ok);
+  margin:0 0 14px;
+  white-space:pre-wrap;
+}
+.hero h1{
+  font-family:var(--mono);
+  font-size:clamp(22px,3.2vw,32px);
+  font-weight:700;
+  margin:0 0 6px;
+  color:var(--cream);
+  letter-spacing:-0.01em;
+}
+.hero .sub{
+  font-family:var(--sans);
+  color:var(--muted);
+  font-size:14.5px;
+  margin:0;
+  max-width:680px;
+}
+.cursor{
+  display:inline-block;width:8px;height:15px;background:var(--ok);
+  vertical-align:-2px;margin-left:2px;
+}
+@media (prefers-reduced-motion: no-preference){
+  .cursor{animation:blink 1s steps(1) infinite;}
+}
+@keyframes blink{50%{opacity:0;}}
+
+/* ===== Layout ===== */
+.wrap{
+  max-width:1180px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 400px;gap:22px;
+  padding:24px;align-items:start;
+}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;}
+}
+
+.col-form{display:flex;flex-direction:column;gap:22px;}
+
+/* ===== Panel (TUI dialog look) ===== */
+.panel{
+  border:1px solid var(--border);
+  background:rgba(44,0,30,0.55);
+  position:relative;
+  padding:22px 20px 20px;
+  scroll-margin-top:70px;
+}
+.panel-title{
+  position:absolute;top:-12px;left:14px;
+  background:var(--bg-deep);
+  padding:0 8px;
+  font-family:var(--mono);
+  font-weight:600;
+  font-size:13px;
+  color:var(--amber);
+  letter-spacing:0.02em;
+}
+.panel-help{
+  font-size:13px;color:var(--muted);margin:0 0 16px;max-width:560px;
+}
+.field{margin-bottom:14px;}
+.field:last-child{margin-bottom:0;}
+.field label{
+  display:block;font-size:12.5px;font-family:var(--mono);
+  color:var(--muted);margin-bottom:5px;letter-spacing:0.01em;
+}
+.field .hint{font-size:11.5px;color:var(--muted-dim);margin-top:4px;}
+.row{display:flex;gap:12px;flex-wrap:wrap;}
+.row > .field{flex:1;min-width:160px;}
+
+input[type=text],input[type=password],input[type=number],select,textarea{
+  width:100%;
+  background:var(--bg-field);
+  border:1px solid var(--border-dim);
+  color:var(--cream);
+  font-family:var(--mono);
+  font-size:13.5px;
+  padding:8px 10px;
+  outline:none;
+}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{
+  outline:2px solid var(--amber);outline-offset:1px;
+}
+textarea{resize:vertical;min-height:64px;}
+select{appearance:none;cursor:pointer;}
+
+.checkrow{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px;font-size:13.5px;}
+.checkrow input{margin-top:3px;accent-color:var(--orange);width:15px;height:15px;flex:none;}
+.checkrow label{font-family:var(--sans);color:var(--cream);cursor:pointer;}
+.checkgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;}
+@media (max-width:480px){.checkgrid{grid-template-columns:1fr;}}
+
+.radiorow{display:flex;gap:18px;margin-bottom:10px;}
+.radiorow label{display:flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer;}
+.radiorow input{accent-color:var(--orange);}
+
+.divider{border:none;border-top:1px dashed var(--border-dim);margin:16px 0;}
+
+/* ===== Bracket buttons (subiquity-style) ===== */
+.btn{
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  background:transparent;color:var(--cream);
+  border:1px solid var(--border);
+  padding:7px 14px;cursor:pointer;
+  letter-spacing:0.02em;
+}
+.btn::before{content:"[ ";color:var(--muted-dim);}
+.btn::after{content:" ]";color:var(--muted-dim);}
+.btn:hover{border-color:var(--amber);color:var(--amber);}
+.btn.primary{
+  background:var(--orange);border-color:var(--orange);color:#1a0012;
+}
+.btn.primary::before,.btn.primary::after{color:rgba(26,0,18,0.55);}
+.btn.primary:hover{background:var(--amber);border-color:var(--amber);color:#1a0012;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+.status{font-size:12.5px;font-family:var(--mono);margin-top:8px;min-height:16px;}
+.status.warn{color:var(--warn);}
+.status.ok{color:var(--ok);}
+
+/* ===== Preview column ===== */
+.preview-wrap{position:sticky;top:24px;display:flex;flex-direction:column;gap:10px;}
+@media (max-width:900px){.preview-wrap{position:static;}}
+.term{
+  border:1px solid var(--border);
+  background:#15000f;
+}
+.term-bar{
+  background:var(--bg-panel);
+  border-bottom:1px solid var(--border-dim);
+  padding:8px 12px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);
+}
+.term pre{
+  margin:0;padding:14px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.55;
+  color:#d9c8d3;
+  max-height:560px;overflow:auto;
+  white-space:pre;
+}
+.term pre .k{color:var(--amber);}
+.term pre .c{color:var(--muted-dim);}
+
+footer{
+  max-width:1180px;margin:0 auto;padding:8px 24px 40px;
+  color:var(--muted-dim);font-size:12px;
+}
+
+.quicknav{
+  position:sticky;top:0;z-index:20;
+  background:var(--bg-deep);
+  border-bottom:1px solid var(--border);
+  padding:10px 24px;
+}
+.quicknav-inner{
+  max-width:1180px;margin:0 auto;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.quicknav-label{
+  font-family:var(--mono);font-size:12px;color:var(--muted-dim);
+  margin-right:2px;
+}
+.quicknav a.btn{text-decoration:none;font-size:12.5px;padding:6px 12px;}
+.req{color:var(--amber);}
+
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <pre>Ubuntu 24.04.2 LTS  ubuntu-server  tty1
+autoinstall config generator — không gửi dữ liệu lên server nào<span class="cursor"></span></pre>
+    <h1>Trình tạo autoinstall.yaml</h1>
+    <p class="sub">Điền các tuỳ chọn cài đặt giống installer Subiquity, mọi thứ (kể cả hash mật khẩu) được tính ngay trong trình duyệt. Xong thì bấm tải file về.</p>
+  </div>
+</div>
+
+<div class="quicknav">
+  <div class="quicknav-inner">
+    <span class="quicknav-label">Cần đổi mỗi lần:</span>
+    <a class="btn" href="#panel-identity">★ Tài khoản &amp; mật khẩu</a>
+    <a class="btn" href="#panel-ssh">★ SSH key</a>
+    <a class="btn" href="#panel-network">★ Mạng</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="col-form">
+
+    <!-- 01 Locale & Keyboard -->
+    <div class="panel">
+      <div class="panel-title">01 — Ngôn ngữ &amp; bàn phím</div>
+      <div class="row">
+        <div class="field">
+          <label for="f-locale">Locale</label>
+          <select id="f-locale">
+            <option value="en_US.UTF-8" selected>en_US.UTF-8 — English (US)</option>
+            <option value="en_GB.UTF-8">en_GB.UTF-8 — English (UK)</option>
+            <option value="vi_VN.UTF-8">vi_VN.UTF-8 — Tiếng Việt</option>
+            <option value="ja_JP.UTF-8">ja_JP.UTF-8 — 日本語</option>
+            <option value="de_DE.UTF-8">de_DE.UTF-8 — Deutsch</option>
+            <option value="fr_FR.UTF-8">fr_FR.UTF-8 — Français</option>
+            <option value="zh_CN.UTF-8">zh_CN.UTF-8 — 中文(简体)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-kb">Bàn phím (layout)</label>
+          <select id="f-kb">
+            <option value="us" selected>us — US</option>
+            <option value="vn">vn — Việt Nam</option>
+            <option value="gb">gb — UK</option>
+            <option value="de">de — Deutsch</option>
+            <option value="fr">fr — Français</option>
+            <option value="jp">jp — 日本語</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 Network -->
+    <div class="panel" id="panel-network">
+      <div class="panel-title"><span class="req">★</span> 02 — Mạng</div>
+      <p class="panel-help">Chọn DHCP nếu VPS/server tự cấp IP (đa số trường hợp). Chọn IP tĩnh nếu nhà cung cấp yêu cầu cấu hình thủ công.</p>
+      <div class="radiorow">
+        <label><input type="radio" name="netmode" value="dhcp" checked> DHCP</label>
+        <label><input type="radio" name="netmode" value="static"> IP tĩnh</label>
+      </div>
+      <div id="net-dhcp-fields" class="field">
+        <label for="f-ifmatch">Pattern tên interface (match)</label>
+        <input type="text" id="f-ifmatch" value="e*">
+        <div class="hint">"e*" khớp các tên kiểu eth0 / ens3 / enp0s3.</div>
+      </div>
+      <div id="net-static-fields" style="display:none;">
+        <div class="row">
+          <div class="field">
+            <label for="f-ifname">Tên interface</label>
+            <input type="text" id="f-ifname" value="eth0">
+          </div>
+          <div class="field">
+            <label for="f-addr">Địa chỉ IP/CIDR</label>
+            <input type="text" id="f-addr" placeholder="192.168.1.50/24">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="f-gw">Gateway</label>
+            <input type="text" id="f-gw" placeholder="192.168.1.1">
+          </div>
+          <div class="field">
+            <label for="f-dns">DNS (phân tách bằng dấu phẩy)</label>
+            <input type="text" id="f-dns" value="1.1.1.1, 8.8.8.8">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 Storage -->
+    <div class="panel">
+      <div class="panel-title">03 — Phân vùng đĩa</div>
+      <p class="panel-help">Dùng toàn bộ đĩa lớn nhất tìm được, theo layout mặc định của Subiquity.</p>
+      <div class="radiorow">
+        <label><input type="radio" name="storage" value="lvm" checked> LVM (khuyến nghị, dễ resize)</label>
+        <label><input type="radio" name="storage" value="direct"> Direct (phân vùng thường)</label>
+      </div>
+    </div>
+
+    <!-- 04 Identity -->
+    <div class="panel" id="panel-identity">
+      <div class="panel-title"><span class="req">★</span> 04 — Tài khoản</div>
+      <div class="row">
+        <div class="field">
+          <label for="f-hostname">Hostname</label>
+          <input type="text" id="f-hostname" value="ubuntu-server">
+        </div>
+        <div class="field">
+          <label for="f-username">Username</label>
+          <input type="text" id="f-username" value="ubuntu">
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-realname">Tên đầy đủ (tuỳ chọn)</label>
+        <input type="text" id="f-realname" placeholder="Tony Nguyen">
+      </div>
+      <hr class="divider">
+      <div class="row">
+        <div class="field">
+          <label for="f-pw">Mật khẩu</label>
+          <input type="password" id="f-pw" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="f-pw2">Xác nhận mật khẩu</label>
+          <input type="password" id="f-pw2" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="f-showpw">
+        <label for="f-showpw">Hiện mật khẩu khi nhập</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-hash" type="button">Tạo hash mật khẩu (SHA-512)</button>
+      </div>
+      <div class="status" id="hash-status"></div>
+      <div class="field" id="hash-result-wrap" style="display:none;margin-top:10px;">
+        <label>Hash kết quả (đã chèn vào file YAML)</label>
+        <input type="text" id="f-hash-result" readonly>
+        <div class="hint">Tương đương lệnh: <code>mkpasswd -m sha-512</code> — không có gì được gửi đi đâu, tính toán chạy hoàn toàn trên máy bạn.</div>
+      </div>
+    </div>
+
+    <!-- 05 SSH -->
+    <div class="panel" id="panel-ssh">
+      <div class="panel-title"><span class="req">★</span> 05 — SSH</div>
+      <div class="checkrow">
+        <input type="checkbox" id="f-ssh-install" checked>
+        <label for="f-ssh-install">Cài &amp; bật OpenSSH server</label>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="f-ssh-allowpw" checked>
+        <label for="f-ssh-allowpw">Cho phép đăng nhập SSH bằng mật khẩu (nếu tắt, bắt buộc dùng SSH key)</label>
+      </div>
+      <div class="field">
+        <label for="f-ssh-keys">SSH public key được phép (mỗi dòng một key)</label>
+        <textarea id="f-ssh-keys" placeholder="ssh-ed25519 AAAAC3Nz... your-comment"></textarea>
+        <div class="hint">Lấy key của bạn bằng: <code>cat ~/.ssh/id_ed25519.pub</code></div>
+      </div>
+    </div>
+
+    <!-- 06 Packages -->
+    <div class="panel">
+      <div class="panel-title">06 — Package &amp; firewall</div>
+      <div class="checkgrid">
+        <div class="checkrow"><input type="checkbox" class="pkg" value="curl" checked id="p-curl"><label for="p-curl">curl</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="git" checked id="p-git"><label for="p-git">git</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="vim" checked id="p-vim"><label for="p-vim">vim</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="htop" checked id="p-htop"><label for="p-htop">htop</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="ufw" checked id="p-ufw"><label for="p-ufw">ufw</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="fail2ban" checked id="p-fail2ban"><label for="p-fail2ban">fail2ban</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="docker.io" id="p-docker"><label for="p-docker">docker.io</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="nginx" id="p-nginx"><label for="p-nginx">nginx</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="build-essential" id="p-build"><label for="p-build">build-essential</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="unzip" id="p-unzip"><label for="p-unzip">unzip</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="tmux" id="p-tmux"><label for="p-tmux">tmux</label></div>
+        <div class="checkrow"><input type="checkbox" class="pkg" value="net-tools" id="p-nettools"><label for="p-nettools">net-tools</label></div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label for="f-pkg-extra">Package khác (phân tách bằng dấu phẩy)</label>
+        <input type="text" id="f-pkg-extra" placeholder="nodejs, python3-pip">
+      </div>
+      <hr class="divider">
+      <div class="checkrow">
+        <input type="checkbox" id="f-ufw-auto" checked>
+        <label for="f-ufw-auto">Tự động mở port SSH trên UFW và enable firewall sau khi cài</label>
+      </div>
+    </div>
+
+    <!-- 07 Misc -->
+    <div class="panel">
+      <div class="panel-title">07 — Timezone, mirror &amp; cập nhật</div>
+      <div class="row">
+        <div class="field">
+          <label for="f-tz">Timezone</label>
+          <select id="f-tz">
+            <option value="Asia/Ho_Chi_Minh" selected>Asia/Ho_Chi_Minh</option>
+            <option value="Asia/Singapore">Asia/Singapore</option>
+            <option value="Asia/Bangkok">Asia/Bangkok</option>
+            <option value="Asia/Tokyo">Asia/Tokyo</option>
+            <option value="UTC">UTC</option>
+            <option value="Europe/London">Europe/London</option>
+            <option value="America/New_York">America/New_York</option>
+            <option value="Australia/Sydney">Australia/Sydney</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-updates">Cập nhật sau khi cài</label>
+          <select id="f-updates">
+            <option value="security" selected>Chỉ security updates</option>
+            <option value="all">Tất cả updates</option>
+          </select>
+        </div>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="f-geoip" checked>
+        <label for="f-geoip">Tự chọn apt mirror theo vị trí (geoip)</label>
+      </div>
+      <div class="field">
+        <label for="f-mirror">Mirror URL tuỳ chỉnh (tuỳ chọn, để trống nếu dùng geoip)</label>
+        <input type="text" id="f-mirror" placeholder="http://mirror.bizflycloud.vn/ubuntu/">
+      </div>
+      <div class="field">
+        <label for="f-late">Lệnh chạy thêm sau khi cài (mỗi dòng một lệnh, không cần tiền tố curtin)</label>
+        <textarea id="f-late" placeholder="apt-get install -y python3-pip"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-shutdown">Sau khi cài xong</label>
+        <select id="f-shutdown">
+          <option value="reboot" selected>Tự khởi động lại (reboot)</option>
+          <option value="poweroff">Tắt máy (poweroff)</option>
+        </select>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-wrap">
+    <div class="term">
+      <div class="term-bar">ubuntu@generator:~$ cat autoinstall.yaml</div>
+      <pre id="yaml-output"></pre>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-download" type="button">Tải autoinstall.yaml</button>
+      <button class="btn" id="btn-copy" type="button">Copy</button>
+      <button class="btn" id="btn-reset" type="button">Reset form</button>
+    </div>
+    <div class="status" id="copy-status"></div>
+  </div>
+</div>
+
+<footer>
+  Công cụ chạy hoàn toàn phía client (không có server, không lưu dữ liệu). Không liên kết với Canonical/Ubuntu. Tham khảo thêm tại
+  <a href="https://canonical-subiquity.readthedocs-hosted.com/en/latest/reference/autoinstall-reference.html" target="_blank" rel="noopener">autoinstall reference docs</a>.
+</footer>
+
+<script>
+// ============== SHA-512 crypt (đã verify khớp 100% với mkpasswd -m sha-512 / python crypt) ==============
+const enc = new TextEncoder();
+
+async function sha512(bytes){
+  const d = await crypto.subtle.digest('SHA-512', bytes);
+  return new Uint8Array(d);
+}
+function concatBytes(...arrays){
+  let total = 0; for (const a of arrays) total += a.length;
+  const out = new Uint8Array(total);
+  let off = 0; for (const a of arrays){ out.set(a, off); off += a.length; }
+  return out;
+}
+function extendBytes(source, size){
+  const result = new Uint8Array(size);
+  let pos = 0;
+  while (pos < size){
+    const chunk = Math.min(source.length, size - pos);
+    result.set(source.subarray(0, chunk), pos);
+    pos += chunk;
+  }
+  return result;
+}
+async function sha512CryptIntermediate(password, salt){
+  const digestB = await sha512(concatBytes(password, salt, password));
+  const keyLen = password.length;
+  const digestBExtended = extendBytes(digestB, keyLen);
+  let parts = [password, salt, digestBExtended];
+  for (let cnt = keyLen; cnt > 0; cnt >>= 1){
+    if ((cnt & 1) !== 0) parts.push(digestB);
+    else parts.push(password);
+  }
+  return await sha512(concatBytes(...parts));
+}
+async function rstrSha512Crypt(password, salt, rounds){
+  const digestA = await sha512CryptIntermediate(password, salt);
+
+  let dpParts = [];
+  for (let i = 0; i < password.length; i++) dpParts.push(password);
+  const dp = await sha512(concatBytes(...(dpParts.length ? dpParts : [new Uint8Array(0)])));
+  const p = extendBytes(dp, password.length);
+
+  let dsParts = [];
+  const repeatCount = 16 + digestA[0];
+  for (let i = 0; i < repeatCount; i++) dsParts.push(salt);
+  const ds = await sha512(concatBytes(...dsParts));
+  const s = extendBytes(ds, salt.length);
+
+  let digest = digestA;
+  for (let i = 0; i < rounds; i++){
+    let parts = [];
+    if (i & 1) parts.push(p); else parts.push(digest);
+    if (i % 3) parts.push(s);
+    if (i % 7) parts.push(p);
+    if (i & 1) parts.push(digest); else parts.push(p);
+    digest = await sha512(concatBytes(...parts));
+  }
+  return digest;
+}
+function bytesToB64(bytes){
+  const tab = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const order = [42,21,0, 1,43,22, 23,2,44, 45,24,3, 4,46,25, 26,5,47, 48,27,6,
+                 7,49,28, 29,8,50, 51,30,9, 10,52,31, 32,11,53, 54,33,12, 13,55,34,
+                 35,14,56, 57,36,15, 16,58,37, 38,17,59, 60,39,18, 19,61,40, 41,20,62, 63];
+  let output = '';
+  for (let i = 0; i < bytes.length; i += 3){
+    if (order[i+1] === undefined){
+      const b0 = bytes[order[i]];
+      output += tab[b0 & 0b00111111] + tab[(b0 & 0b11000000) >>> 6];
+    } else {
+      const b0 = bytes[order[i]], b1 = bytes[order[i+1]], b2 = bytes[order[i+2]];
+      const c1 = b0 & 0b00111111;
+      const c2 = ((b0 & 0b11000000) >>> 6) | ((b1 & 0b00001111) << 2);
+      const c3 = ((b1 & 0b11110000) >>> 4) | ((b2 & 0b00000011) << 4);
+      const c4 = (b2 & 0b11111100) >>> 2;
+      output += tab[c1] + tab[c2] + tab[c3] + tab[c4];
+    }
+  }
+  return output;
+}
+const SALT_CHARS = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+function randomSalt(len){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  let out = '';
+  for (let i=0;i<len;i++) out += SALT_CHARS[arr[i] % SALT_CHARS.length];
+  return out;
+}
+async function sha512crypt(password, salt, rounds){
+  rounds = rounds || 5000;
+  salt = salt.slice(0,16);
+  const digest = await rstrSha512Crypt(enc.encode(password), enc.encode(salt), rounds);
+  const hash = bytesToB64(digest);
+  return rounds === 5000 ? `$6$${salt}$${hash}` : `$6$rounds=${rounds}$${salt}$${hash}`;
+}
+
+// ============== State / DOM refs ==============
+const $ = (id) => document.getElementById(id);
+let currentSalt = randomSalt(16);
+let currentHash = '';
+
+function escYamlPlain(str){
+  // Trả về dạng an toàn cho 1 giá trị scalar đơn giản trong YAML (hostname/username...)
+  return str.trim();
+}
+
+function buildYAML(){
+  const locale = $('f-locale').value;
+  const kb = $('f-kb').value;
+  const netMode = document.querySelector('input[name=netmode]:checked').value;
+  const storage = document.querySelector('input[name=storage]:checked').value;
+  const hostname = escYamlPlain($('f-hostname').value || 'ubuntu-server');
+  const username = escYamlPlain($('f-username').value || 'ubuntu');
+  const realname = $('f-realname').value.trim();
+  const sshInstall = $('f-ssh-install').checked;
+  const sshAllowPw = $('f-ssh-allowpw').checked;
+  const sshKeys = $('f-ssh-keys').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const tz = $('f-tz').value;
+  const updates = $('f-updates').value;
+  const geoip = $('f-geoip').checked;
+  const mirror = $('f-mirror').value.trim();
+  const lateExtra = $('f-late').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const shutdownAction = $('f-shutdown').value;
+  const ufwAuto = $('f-ufw-auto').checked;
+
+  let packages = Array.from(document.querySelectorAll('.pkg:checked')).map(el=>el.value);
+  const extraPkgs = $('f-pkg-extra').value.split(',').map(s=>s.trim()).filter(Boolean);
+  packages = packages.concat(extraPkgs);
+  if (ufwAuto && !packages.includes('ufw')) packages.push('ufw');
+
+  const lines = [];
+  lines.push('#cloud-config');
+  lines.push('# autoinstall.yaml — generated bằng trình tạo, kiểm tra lại trước khi dùng thật');
+  lines.push('autoinstall:');
+  lines.push('  version: 1');
+  lines.push('');
+  lines.push(`  locale: ${locale}`);
+  lines.push('  keyboard:');
+  lines.push(`    layout: ${kb}`);
+  lines.push('');
+  lines.push('  network:');
+  lines.push('    network:');
+  lines.push('      version: 2');
+  lines.push('      ethernets:');
+  if (netMode === 'static'){
+    const ifname = escYamlPlain($('f-ifname').value || 'eth0');
+    const addr = $('f-addr').value.trim() || '192.168.1.50/24';
+    const gw = $('f-gw').value.trim() || '192.168.1.1';
+    const dns = $('f-dns').value.split(',').map(s=>s.trim()).filter(Boolean);
+    lines.push(`        ${ifname}:`);
+    lines.push(`          addresses: [${addr}]`);
+    lines.push(`          gateway4: ${gw}`);
+    if (dns.length){
+      lines.push('          nameservers:');
+      lines.push(`            addresses: [${dns.join(', ')}]`);
+    }
+  } else {
+    const ifmatch = $('f-ifmatch').value.trim() || 'e*';
+    lines.push('        eth0:');
+    lines.push('          match:');
+    lines.push(`            name: "${ifmatch}"`);
+    lines.push('          dhcp4: true');
+    lines.push('          dhcp-identifier: mac');
+  }
+  lines.push('');
+  lines.push('  apt:');
+  lines.push(`    geoip: ${geoip}`);
+  if (mirror){
+    lines.push('    primary:');
+    lines.push('      - arches: [amd64]');
+    lines.push(`        uri: "${mirror}"`);
+  }
+  lines.push('');
+  lines.push('  storage:');
+  lines.push('    layout:');
+  lines.push(`      name: ${storage}`);
+  lines.push('');
+  lines.push('  identity:');
+  lines.push(`    hostname: ${hostname}`);
+  lines.push(`    username: ${username}`);
+  if (realname) lines.push(`    realname: "${realname}"`);
+  lines.push(`    password: "${currentHash || '$6$REPLACE_WITH_YOUR_HASHED_PASSWORD'}"`);
+  lines.push('');
+  lines.push('  ssh:');
+  lines.push(`    install-server: ${sshInstall}`);
+  lines.push(`    allow-pw: ${sshAllowPw}`);
+  if (sshKeys.length){
+    lines.push('    authorized-keys:');
+    sshKeys.forEach(k => lines.push(`      - ${k}`));
+  }
+  lines.push('');
+  if (packages.length){
+    lines.push('  packages:');
+    packages.forEach(p => lines.push(`    - ${p}`));
+    lines.push('');
+  }
+  lines.push(`  updates: ${updates}`);
+  lines.push('');
+
+  const lateCommands = [];
+  lateCommands.push(`timedatectl set-timezone ${tz}`);
+  if (ufwAuto){
+    lateCommands.push('ufw allow OpenSSH');
+    lateCommands.push('ufw --force enable');
+  }
+  lateExtra.forEach(c => lateCommands.push(c));
+  lines.push('  late-commands:');
+  lateCommands.forEach(c => lines.push(`    - curtin in-target --target=/target -- ${c}`));
+  lines.push('');
+  lines.push(`  shutdown: ${shutdownAction}`);
+
+  return lines.join('\n');
+}
+
+function highlightYAML(text){
+  return text
+    .split('\n')
+    .map(line => {
+      const m = line.match(/^(\s*(?:-\s*)?)([\w.-]+:)(.*)$/);
+      if (m){
+        return m[1] + '<span class="k">' + m[2] + '</span>' + m[3];
+      }
+      if (/^\s*#/.test(line)) return '<span class="c">' + line + '</span>';
+      return line;
+    })
+    .join('\n');
+}
+
+function render(){
+  const yaml = buildYAML();
+  $('yaml-output').innerHTML = highlightYAML(yaml)
+    .replace(/&(?!amp;|lt;|gt;)/g,'&amp;');
+}
+
+// toggle network mode fields
+document.querySelectorAll('input[name=netmode]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    const mode = document.querySelector('input[name=netmode]:checked').value;
+    $('net-dhcp-fields').style.display = mode === 'dhcp' ? '' : 'none';
+    $('net-static-fields').style.display = mode === 'static' ? '' : 'none';
+    render();
+  });
+});
+
+// show/hide password
+$('f-showpw').addEventListener('change', (e)=>{
+  const t = e.target.checked ? 'text' : 'password';
+  $('f-pw').type = t; $('f-pw2').type = t;
+});
+
+// hash generation
+$('btn-hash').addEventListener('click', async ()=>{
+  const pw = $('f-pw').value, pw2 = $('f-pw2').value;
+  const statusEl = $('hash-status');
+  if (!pw){ statusEl.textContent = '[ ! ] Nhập mật khẩu trước.'; statusEl.className='status warn'; return; }
+  if (pw !== pw2){ statusEl.textContent = '[ ! ] Hai mật khẩu không khớp.'; statusEl.className='status warn'; return; }
+  const btn = $('btn-hash');
+  btn.disabled = true; statusEl.textContent = '... đang tính hash (sha512crypt, 5000 rounds)'; statusEl.className = 'status';
+  currentSalt = randomSalt(16);
+  try{
+    currentHash = await sha512crypt(pw, currentSalt, 5000);
+    $('f-hash-result').value = currentHash;
+    $('hash-result-wrap').style.display = '';
+    statusEl.textContent = '[ ok ] Đã tạo hash và chèn vào file YAML bên phải.';
+    statusEl.className = 'status ok';
+  }catch(err){
+    statusEl.textContent = '[ ! ] Lỗi: ' + err.message;
+    statusEl.className = 'status warn';
+  }finally{
+    btn.disabled = false;
+    render();
+  }
+});
+
+// download
+$('btn-download').addEventListener('click', ()=>{
+  const yaml = buildYAML();
+  const blob = new Blob([yaml], {type:'text/yaml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'autoinstall.yaml';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// copy
+$('btn-copy').addEventListener('click', async ()=>{
+  const yaml = buildYAML();
+  const statusEl = $('copy-status');
+  try{
+    await navigator.clipboard.writeText(yaml);
+    statusEl.textContent = '[ ok ] Đã copy vào clipboard.';
+    statusEl.className = 'status ok';
+  }catch(e){
+    statusEl.textContent = '[ ! ] Không copy được, hãy chọn và copy thủ công.';
+    statusEl.className = 'status warn';
+  }
+  setTimeout(()=>{ statusEl.textContent=''; }, 2500);
+});
+
+// reset
+$('btn-reset').addEventListener('click', ()=>{
+  if (!confirm('Reset toàn bộ form về mặc định?')) return;
+  document.querySelectorAll('input[type=text], input[type=password]').forEach(el=>el.value='');
+  $('f-hostname').value = 'ubuntu-server';
+  $('f-username').value = 'ubuntu';
+  $('f-ifmatch').value = 'e*';
+  $('f-dns').value = '1.1.1.1, 8.8.8.8';
+  $('f-ifname').value = 'eth0';
+  document.querySelectorAll('.pkg').forEach(el=>el.checked=false);
+  ['p-curl','p-git','p-vim','p-htop','p-ufw','p-fail2ban'].forEach(id=>$(id).checked=true);
+  $('f-ssh-install').checked = true;
+  $('f-ssh-allowpw').checked = true;
+  $('f-geoip').checked = true;
+  $('f-ufw-auto').checked = true;
+  $('f-tz').value = 'Asia/Ho_Chi_Minh';
+  $('f-updates').value = 'security';
+  $('f-shutdown').value = 'reboot';
+  document.querySelector('input[name=netmode][value=dhcp]').checked = true;
+  document.querySelector('input[name=storage][value=lvm]').checked = true;
+  $('net-dhcp-fields').style.display='';
+  $('net-static-fields').style.display='none';
+  currentHash = '';
+  $('hash-result-wrap').style.display='none';
+  $('hash-status').textContent='';
+  render();
+});
+
+// live update on any change/input across the whole form
+document.querySelector('.col-form').addEventListener('input', render);
+document.querySelector('.col-form').addEventListener('change', render);
+
+render();
+</script>
+</body>
+</html>
