@@ -1,56 +1,39 @@
 #cloud-config
-# autoinstall.yaml - dùng cho Ubuntu Server 22.04 / 24.04 LTS (Subiquity)
-# Đặt file này tên là "user-data" (kèm "meta-data" rỗng) trong ISO autoinstall,
-# hoặc trỏ qua kernel param: autoinstall ds=nocloud-net;s=http://<server>/
-
+# autoinstall.yaml — generated bằng trình tạo, kiểm tra lại trước khi dùng thật
 autoinstall:
   version: 1
 
-  # ====== Locale & bàn phím ======
   locale: en_US.UTF-8
   keyboard:
     layout: us
 
-  # ====== Network: lấy IP qua DHCP cho tất cả interface ======
   network:
     network:
       version: 2
       ethernets:
         eth0:
           match:
-            name: "e*"          # khớp mọi interface dạng eth0/ens3/enp0s3...
+            name: "e*"
           dhcp4: true
           dhcp-identifier: mac
 
-  # ====== Apt mirror (để trống = dùng mirror mặc định/geoip) ======
   apt:
     geoip: true
-    # Nếu muốn fix mirror VN cho nhanh, bỏ comment dòng dưới:
-    # primary:
-    #   - arches: [amd64]
-    #     uri: "http://mirror.bizflycloud.vn/ubuntu/"
 
-  # ====== Phân vùng đĩa: dùng toàn bộ đĩa đầu tiên, layout LVM ======
   storage:
     layout:
       name: lvm
-      # name: direct   # đổi thành "direct" nếu không muốn dùng LVM
 
-  # ====== Tài khoản người dùng ======
   identity:
-    hostname: ubuntu-server
-    username: ubuntu
-    # Tạo password hash bằng: mkpasswd -m sha-512 (cần cài package whois)
-    password: "$6$exampleSaltValue$REPLACE_WITH_YOUR_HASHED_PASSWORD"
+    hostname: nqatech
+    username: nqatech
+    realname: "nqatech"
+    password: "$6$z/AP10hELeQ.PT8E$sDzuw4jTf.c8rCc8vpgph5fYkMbDp.Jlh9W/TPV3TU3uOT/3QykM/70f3wWRe5p2zGaJkPO4AxisHxQx9sghl/"
 
-  # ====== SSH ======
   ssh:
     install-server: true
-    allow-pw: true              # set false nếu chỉ muốn login bằng key
-    authorized-keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... your-key-comment
+    allow-pw: true
 
-  # ====== Package cài thêm ======
   packages:
     - curl
     - git
@@ -59,18 +42,11 @@ autoinstall:
     - ufw
     - fail2ban
 
-  # ====== Cập nhật security sau khi cài ======
   updates: security
 
-  # ====== Lệnh chạy sau khi cài xong (trong môi trường target) ======
   late-commands:
-    # Set timezone Việt Nam
     - curtin in-target --target=/target -- timedatectl set-timezone Asia/Ho_Chi_Minh
-    # Cho phép SSH password login nếu cần (đồng bộ với phần ssh ở trên)
-    - curtin in-target --target=/target -- systemctl enable ssh
-    # Mở firewall port SSH cơ bản
     - curtin in-target --target=/target -- ufw allow OpenSSH
     - curtin in-target --target=/target -- ufw --force enable
 
-  # ====== Tắt prompt reboot tự động sau khi cài (tuỳ chọn) ======
   shutdown: reboot
